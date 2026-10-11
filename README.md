@@ -58,6 +58,8 @@ A scam check is only as good as the chain behind it. No single model reads handw
 | Backup vision | **Kimi K2.6** (Cloudflare Workers AI) | Takes over the photo checks if Gemini is down or slow, on a second provider, so the demo and the buyer are never stuck |
 | Photo-reuse fingerprint · ShopGoodwill rule · matching | **Plain code** | Free, instant, and the same answer every time |
 
+**Models chosen by measurement, not brand.** Kimi K2.6 started as our main vision model. Measured live, it was slow and timed out in verification, so Gemini now leads and Kimi stands by on a second provider: the hunt dropped from 149 seconds to 31, and the photo verdict from 33 seconds to about 7.
+
 **Cheapest checker first:** code runs before any model sees a listing; Jev's typed questions run before the more expensive vision calls. No Anthropic or Meta models are used in the product.
 
 **Code where code is enough.** Every listing photo gets a 64-bit fingerprint of its light-and-dark pattern ([`src/dhash.ts`](src/dhash.ts)); a copied or re-saved listing photo lands within a few bits of the original, catching lazy scams without paying a model to look. The clever scam — a fresh phone photo of a screen — is the vision models' job.
