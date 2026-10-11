@@ -528,7 +528,7 @@ const SAME_SCHEMA = { type: "object", additionalProperties: false,
     properties: {
         photo_of_screen: { type: "boolean", description: "True if the proof photo is a picture of a screen (laptop/monitor/phone) rather than the real object" },
         screen_evidence: { type: "string", description: "Plain words: what shows it is a screen (bezel, glare, moire, pixels, browser or gallery UI such as 'Gallery (1 of 12)', a close button). Empty if none." },
-        same_photo_as_listing: { type: "integer", description: "0-100: the proof photo shows the same photograph as a listing photo (same angle, background, lighting), e.g. re-shot off a screen" },
+        same_photo_as_listing: { type: "integer", description: "0-100: the proof photo contains or displays one of the listing photos (same picture: same angle, background and lighting), for example the listing photo shown on a laptop or phone screen and photographed again. 0 if it is a genuinely new picture." },
         card_visible: { type: "boolean" }, serial_sticker_visible: { type: "boolean" },
         rtx_4090_likelihood: { type: "integer", description: "0-100" },
         same_model_as_listing: { type: "integer", description: "0-100: the card in the new photo is the same make and model as in the listing photo. 50 if there is no listing photo to compare." },
