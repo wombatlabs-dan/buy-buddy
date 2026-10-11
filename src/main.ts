@@ -10,6 +10,7 @@ import path from "node:path";
 import { Human, Job } from "anbaric";
 import { hunts, persistence, files, ev, type TrailEvent, type ListingView } from "./hunt.js";
 import { BY_ID, HAYSTACK_CAPTURED_AT, HAYSTACK_LABEL, ROOT } from "./haystack.js";
+import { sendToSeller } from "./outreach.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const deployed = !!process.env.ANBARIC_APP_ID;
@@ -142,6 +143,16 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL) {
                 new Map([["sellerPhoto", { path: filePath, version, listingId: view.targetListingId, at: new Date().toISOString(), bytes: body.length }]]),
                 { step: "seller_photo", action: "Uploaded the seller's photo", decision: `Photo ${version} for the challenge "${view.challenge.code}" (${Math.round(body.length / 1024)} KB)` });
             return json(res, 202, { ok: true, version });
+        }
+
+        // Auto-send: as soon as the buyer picks a listing, message the seller with the coach's questions.
+        if (action === "auto-message" && req.method === "POST") {
+            const listingId = view.selectedListingId;
+            const c = view.candidates.find((x) => x.id === listingId);
+            if (!c) return json(res, 409, { error: "Pick a listing first." });
+            const text = `Hi! Interested in "${c.originalTitle}". ${c.sellerQuestions.map((q, i) => `${i + 1}. ${q.text}`).join(" ")}`;
+            const sent = await sendToSeller(c.id, text);
+            return json(res, 200, { ok: true, sent });
         }
 
         if (action === "decision" && req.method === "POST") {
