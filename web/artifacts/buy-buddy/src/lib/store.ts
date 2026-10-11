@@ -13,6 +13,8 @@ export interface TrustEvent {
 }
 
 export interface HuntState {
+  /** Live mode: the backend hunt (an Anbaric job) this browser is following. */
+  huntId?: string;
   query: string;
   maxPrice: number;
   startedAt: string;
@@ -65,6 +67,9 @@ export const hunt = {
   reset: () => set(null),
   start(query: string, maxPrice: number, plan: HuntState["plan"]) {
     set({ query, maxPrice, plan, startedAt: new Date().toISOString(), answers: {}, checks: {}, challenges: {}, events: [] });
+  },
+  startLive(huntId: string, query: string, maxPrice: number, plan: HuntState["plan"]) {
+    set({ huntId, query, maxPrice, plan, startedAt: new Date().toISOString(), answers: {}, checks: {}, challenges: {}, events: [] });
   },
   log(e: Omit<TrustEvent, "id" | "at">) {
     if (!state) return;

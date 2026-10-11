@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +10,8 @@ import { asset, MONTHLY_PRICE, perHuntFee, usd } from "@/lib/pricing";
 import { hunt } from "@/lib/store";
 import { SAMPLE_GOING_PRICE } from "@/lib/sample-data";
 import { HeroCrate } from "@/components/hero-crate";
+import { isLive } from "@/lib/api";
+import { liveApi } from "@/lib/live";
 
 const schema = z.object({
   query: z.string().trim().min(2, "Tell us what you're looking for."),
@@ -36,13 +38,30 @@ export default function Home({ focusStart = false }: { focusStart?: boolean }) {
   useMeta("Buy used electronics with a friend", "Buy Buddy finds overlooked used-electronics deals, checks every listing and shows its reasoning. Sample data demo.");
   const [, navigate] = useLocation();
   const startRef = useRef<HTMLElement>(null);
-  const form = useForm<FormIn, unknown, FormOut>({ resolver: zodResolver(schema), defaultValues: { query: "RTX 4090", maxPrice: 1500, plan: "per-hunt" } });
+  const form = useForm<FormIn, unknown, FormOut>({ resolver: zodResolver(schema), defaultValues: { query: "RTX 4090", maxPrice: 2500, plan: "per-hunt" } });
 
   useEffect(() => {
     if (focusStart) startRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focusStart]);
 
-  const onSubmit = (v: FormOut) => {
+  const [busy, setBusy] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const onSubmit = async (v: FormOut) => {
+    if (isLive) {
+      // Live: the backend starts the hunt (an Anbaric job) and records who started it.
+      setBusy(true);
+      setStartError(null);
+      try {
+        const { huntId } = await liveApi.createHunt({ query: v.query, maxPrice: v.maxPrice, plan: v.plan });
+        hunt.startLive(huntId, v.query, v.maxPrice, v.plan);
+        navigate("/hunt");
+      } catch (e) {
+        setStartError(e instanceof Error ? e.message : "Couldn't start the hunt.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     logHuntStart(v.query, v.maxPrice, v.plan, /4090/.test(v.query.replace(/\s+/g, "")));
     navigate("/hunt");
   };
@@ -111,9 +130,10 @@ export default function Home({ focusStart = false }: { focusStart?: boolean }) {
                 </FormItem>
               )} />
               <div className="md:col-span-2 flex flex-wrap items-center gap-4">
-                <button type="submit" className="h-12 rounded-full bg-foreground text-background px-7 inline-flex items-center gap-2 hover:gap-3 transition-all" data-testid="button-start-hunting">
-                  Start hunting <ArrowRight className="h-4 w-4" aria-hidden />
+                <button type="submit" disabled={busy} className="h-12 rounded-full bg-foreground text-background px-7 inline-flex items-center gap-2 hover:gap-3 transition-all disabled:opacity-60" data-testid="button-start-hunting">
+                  {busy ? "Starting the hunt..." : "Start hunting"} <ArrowRight className="h-4 w-4" aria-hidden />
                 </button>
+                {startError && <p className="text-sm text-destructive w-full" role="alert" data-testid="text-start-error">{startError}</p>}
                 <Link href="/pricing" className="text-sm underline underline-offset-4" data-testid="link-pricing-inline">How pricing works</Link>
               </div>
             </form>

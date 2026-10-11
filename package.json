@@ -8,17 +8,20 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsx src/main.ts"
+    "start": "tsx src/main.ts",
+    "build:web": "cd web && pnpm --filter @workspace/buy-buddy run build && rm -rf ../static && cp -R artifacts/buy-buddy/dist/public ../static"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "anbaric": "^1.68.3"
+    "anbaric": "^1.68.3",
+    "jpeg-js": "^0.4.4"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "sharp": "^0.35.5",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

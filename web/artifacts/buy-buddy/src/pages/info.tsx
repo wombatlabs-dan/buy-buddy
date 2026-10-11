@@ -4,7 +4,7 @@ import { MONTHLY_PRICE, perHuntFee, usd } from "@/lib/pricing";
 
 export function PricingPage() {
   useMeta("Pricing", "2% of the item's going price per hunt, minimum $9, maximum $49, or $14.99 a month. Demo, no charge.");
-  const ex = [[450, "Steam Deck"], [1200, "RTX 4090"], [3200, "MacBook Pro"]] as const;
+  const ex = [[450, "Steam Deck"], [2500, "RTX 4090"], [3200, "MacBook Pro"]] as const;
   return (
     <Page>
       <div className="mx-auto max-w-5xl px-5 py-16">

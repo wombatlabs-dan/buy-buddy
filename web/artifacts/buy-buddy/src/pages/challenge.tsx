@@ -7,6 +7,8 @@ import { api } from "@/lib/api";
 import { hunt, type HuntState } from "@/lib/store";
 import type { ChallengeScenario, Listing } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { isLive } from "@/lib/api";
+import { LiveChallenge } from "./challenge-live";
 
 const MAX = 10 * 1024 * 1024;
 const scenarios: { v: ChallengeScenario; label: string }[] = [
@@ -156,5 +158,6 @@ function Challenge({ l, h }: { l: Listing; h: HuntState }) {
 export default function ChallengePage() {
   const { id } = useParams<{ id: string }>();
   useMeta("Photo challenge", "Ask the seller for a photo of the serial sticker next to a unique handwritten code. Sample verdicts only.");
-  return <ListingGate id={id}>{(l, h) => l.sellerKind === "shopgoodwill" ? <Redirect to={`/listing/${l.id}/decision`} replace /> : <Challenge l={l} h={h} />}</ListingGate>;
+  return <ListingGate id={id}>{(l, h, live) => l.sellerKind === "shopgoodwill" ? <Redirect to={`/listing/${l.id}/decision`} replace />
+    : isLive && live ? <LiveChallenge l={l} live={live} /> : <Challenge l={l} h={h} />}</ListingGate>;
 }

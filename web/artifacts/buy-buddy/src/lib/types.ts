@@ -43,6 +43,13 @@ export interface Listing {
   searchUrl?: string;
   postedAgo: string;
   finalist: boolean;
+  // Live-only fields from the backend
+  visionConfidence?: number;
+  checklist?: Array<{ item: string; why: string; severity: string }>;
+  coachedBy?: string;
+  bids?: number | null;
+  ends?: string | null;
+  kind?: string;
 }
 
 export interface HuntResult {

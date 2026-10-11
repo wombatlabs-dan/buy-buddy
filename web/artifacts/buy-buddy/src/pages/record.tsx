@@ -5,10 +5,16 @@ import { Page, Stepper, useMeta } from "@/components/shell";
 import { NoHunt } from "./haystack";
 import { hunt, useHunt } from "@/lib/store";
 import { usd } from "@/lib/pricing";
+import { isLive } from "@/lib/api";
+import LiveRecord from "./record-live";
 
 const icon = { model: Bot, code: Cog, you: User };
 
 export default function RecordPage() {
+  return isLive ? <LiveRecord /> : <SampleRecord />;
+}
+
+function SampleRecord() {
   useMeta("Trust record", "Every step of your hunt: who or what did it, what it decided, when, and what it cost.");
   const h = useHunt();
   const [, navigate] = useLocation();

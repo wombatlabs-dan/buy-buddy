@@ -56,4 +56,23 @@ export const sampleApi: BuyBuddyApi = {
   },
 };
 
+/**
+ * Provider selection. Live (the Buy Buddy backend on the same origin) is the default.
+ * The sample provider runs only when explicitly chosen — `?sample=1` in the URL or
+ * VITE_BUY_BUDDY_MODE=sample at build time — and every screen then says "Sample data".
+ * A failed live request never falls back to sample data.
+ */
+function pickMode(): "live" | "sample" {
+  if (import.meta.env.VITE_BUY_BUDDY_MODE === "sample") return "sample";
+  try {
+    const q = new URLSearchParams(window.location.search).get("sample");
+    if (q === "1") sessionStorage.setItem("buy-buddy:mode", "sample");
+    if (q === "0") sessionStorage.removeItem("buy-buddy:mode");
+    return sessionStorage.getItem("buy-buddy:mode") === "sample" ? "sample" : "live";
+  } catch {
+    return "live";
+  }
+}
+export const MODE = pickMode();
+export const isLive = MODE === "live";
 export const api: BuyBuddyApi = sampleApi;
