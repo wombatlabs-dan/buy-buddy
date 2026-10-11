@@ -39,7 +39,7 @@ export function SampleBanner() {
     <div className="bg-foreground text-background text-[13px] py-2 px-4 text-center flex items-center justify-center gap-2" role="note" data-testid="banner-sample">
       <FlaskConical className="h-3.5 w-3.5" aria-hidden />
       {isLive
-        ? <span><strong className="font-medium">Sample data</strong> — real listings captured Oct 11, 2026, each linked to its live page. The models, checks and trust record are live. Nothing is charged or sent.</span>
+        ? <span><strong className="font-medium">Sample data</strong> — The listings are pre-captured, but the AI work is live.</span>
         : <span><strong className="font-medium">Sample data</strong> — listings, verdicts and model costs are illustrative. Nothing is charged or sent.</span>}
     </div>
   );
