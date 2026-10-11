@@ -52,6 +52,8 @@ function Detail({ l, h, live }: { l: Listing; h: HuntState; live?: LiveHunt }) {
     setGoError(null);
     try {
       await liveApi.select(live.id, l.id);
+      // Auto-send the checked questions to the seller so the buyer doesn't have to.
+      await fetch(`${import.meta.env.BASE_URL}api/hunts/${live.id}/auto-message`, { method: "POST" });
       expect(live.id, (x) => x.targetListingId === l.id && (goodwill ? x.state === "buyer_decision" : x.challenge?.listingId === l.id));
       navigate(next);
     } catch (e) {
@@ -124,7 +126,7 @@ function Detail({ l, h, live }: { l: Listing; h: HuntState; live?: LiveHunt }) {
             <button onClick={copy} className="h-11 rounded-full bg-foreground text-background px-5 inline-flex items-center gap-2" data-testid="button-copy-message">
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? "Copied" : "Copy message to send"}
             </button>
-            <span className="text-xs text-muted-foreground">Nothing is sent automatically.</span>
+            <span className="text-xs text-muted-foreground">Your questions are sent to the seller automatically when you continue.</span>
           </div>
         </section>
       </div>
