@@ -213,11 +213,22 @@ class OpenRouterClient extends Agent.Client {
     }
 }
 
+// Jev answers typed questions (yes/no, choice, score), not free-form JSON, so its
+// actor's client says so rather than pretending to be a chat model. Screening and
+// verification call jev() directly.
+class JevClient extends Agent.Client {
+    async generate(): Promise<Record<string, any>> {
+        throw new Error(`${MODELS.jev} answers typed questions only; call jev(state, questions)`);
+    }
+}
+
 export const ACTORS = {
     expander: new Agent("expander-glm-5.3-flash", "search", new OpenRouterClient(MODELS.expander)),
-    screener: new Agent("screener-jev", "screening", new OpenRouterClient(MODELS.coach)),
+    screener: new Agent("screener-jev", "screening", new JevClient()),
+    // Vision runs Kimi K2.6 on Workers AI via visionJSON(); this client is the OpenRouter fallback route.
     looker: new Agent("vision-kimi-k2.6", "vision", new OpenRouterClient(MODELS.visionFallback)),
     coach: new Agent("coach-gemini-3.8-flash", "coaching", new OpenRouterClient(MODELS.coach)),
+    // Verification combines several models (reader, vision, Jev); each call is named on the trail.
     verifier: new Agent("verifier-kimi-gemini-jev", "verification", new OpenRouterClient(MODELS.reader)),
     matcher: new Code("haystack-matcher", "code"),
     router: new Code("shopgoodwill-rule", "code"),

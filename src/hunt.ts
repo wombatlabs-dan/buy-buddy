@@ -401,7 +401,9 @@ look.run = async (job) => {
     const demo = candidates.find((c) => c.id === DEMO_ID);
     if (demo) {
         demo.photos = DEMO_PHOTOS;
-        demo.whyMatched = ["Featured demo listing: real photos from eBay item 128125153911, labeled Sample data", ...demo.whyMatched];
+        const over = demo.price > maxPrice;
+        demo.whyMatched = [`Featured demo listing: real photos from eBay item 128125153911, labeled Sample data${over ? `. Over your $${maxPrice} budget — shown so you can try the photo challenge` : ""}`, ...demo.whyMatched];
+        if (over) demo.location = `Over your $${maxPrice} budget · featured demo`;
     }
     // Finalists: best in-budget candidates by confidence, discount and risk.
     const score = (c: ListingView) => Math.max(c.matchConfidence, c.visionConfidence ?? 0) / 100 + (1 - c.price / going) * 0.6 - (c.risk.level === "high" ? 0.5 : c.risk.level === "medium" ? 0.15 : 0);
