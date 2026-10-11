@@ -73,8 +73,8 @@ export default function Home({ focusStart = false }: { focusStart?: boolean }) {
       <section className="relative overflow-hidden" aria-label="Introduction">
         <div className="absolute inset-0 h-[560px] md:h-[620px]" style={{ background: `url(${asset("images/sky.jpg")}) center/cover` }} aria-hidden />
         <Header transparent />
-        <div className="relative pt-32 md:pt-40 text-center px-5">
-          <p className="display text-[clamp(1.25rem,5.5vw,4.5rem)] leading-[1.05] whitespace-nowrap rise" data-testid="text-tagline">The friend who checks the listing first</p>
+        <div className="relative pt-28 md:pt-32 text-center px-5">
+          <p className="display text-[clamp(1.125rem,4.5vw,3rem)] leading-tight whitespace-nowrap rise" data-testid="text-tagline">The friend who checks the listing first</p>
         </div>
         <div className="relative mt-6 h-[380px] md:h-[440px]">
           <svg className="absolute bottom-0 left-0 w-full h-[260px] md:h-[300px]" viewBox="0 0 1440 300" preserveAspectRatio="none" aria-hidden>
