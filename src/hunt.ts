@@ -416,10 +416,12 @@ look.run = async (job) => {
     if (demo) finalists.unshift(demo);
     for (const f of finalists) f.finalist = true;
     candidates.sort((a, b) => Number(b.finalist) - Number(a.finalist) || score(b) - score(a));
-    rejected.sort((a, b) => b.jev - a.jev);
+    // Show the instructive rejections first: scam patterns and decoy parts, then near misses.
+    const teach = (r: RejectedView) => /Ships to you|below market/.test(r.reason) ? 2 : /part or accessory/.test(r.reason) ? 1 : 0;
+    rejected.sort((a, b) => teach(b) - teach(a) || b.jev - a.jev);
     trail.push(ev({ step: "look", actor: "Code: haystack-matcher", actorId: ACTORS.matcher.id, actorKind: "code", action: "Picked candidates and finalists",
         decision: `${candidates.length} candidates (${candidates.filter((c) => c.tags.includes("photo")).length} found only by photo); ${finalists.length} finalists within $${maxPrice}` }));
-    return new Map<string, any>([["candidates", candidates], ["rejected", rejected.slice(0, 12)], ["finalistIds", finalists.map((f) => f.id)], ["trail", trail],
+    return new Map<string, any>([["candidates", candidates], ["rejected", rejected.slice(0, 16)], ["finalistIds", finalists.map((f) => f.id)], ["trail", trail],
         ["funnel", { ...((await job.properties.get("funnel")) ?? {}), visionChecked: ok.length, candidates: candidates.length, finalists: finalists.length }]]);
 };
 
