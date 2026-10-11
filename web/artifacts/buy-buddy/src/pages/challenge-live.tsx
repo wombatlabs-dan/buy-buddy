@@ -47,7 +47,8 @@ export function LiveChallenge({ l, live }: { l: Listing; live: LiveHunt }) {
   };
   const copy = async () => {
     if (!challenge) return;
-    try { await navigator.clipboard.writeText(`Could you write "${challenge.code}" on a piece of paper and send me a photo of ${challenge.shot.replace("this code", "it")}? Thanks!`); toast({ title: "Challenge text copied", description: "Send it to the seller yourself. Buy Buddy sends nothing." }); }
+    const text = `Could you write "${challenge.code}" on a piece of paper and send me a photo of ${challenge.shot.replace("this code", "it")}? Thanks!`;
+    try { await navigator.clipboard.writeText(text); toast({ title: "Copied to clipboard:", description: `"${text}"` }); }
     catch { toast({ title: "Couldn't copy", description: "Clipboard is blocked. Copy the code by hand.", variant: "destructive" }); }
   };
   const submit = async () => {
