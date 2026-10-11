@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Buy Buddy"
+description = "A friendly buyer's agent for used electronics. Start a hunt, narrow the haystack, inspect listing risks, try photo verification, make your decision, and review a transparent trust record. Sample-data demo prepared for an existing backend API."
+version = "1.0.0"
+id = "artifacts/buy-buddy"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18713
+
+[services.development]
+run = "pnpm --filter @workspace/buy-buddy run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/buy-buddy", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/buy-buddy/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18713"
+BASE_PATH = "/"
