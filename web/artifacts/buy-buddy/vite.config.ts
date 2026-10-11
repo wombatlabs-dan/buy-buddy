@@ -3,9 +3,11 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
-import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
-const rawPort = process.env.PORT;
+// PORT and BASE_PATH are required on Replit. Off Replit (the Anbaric build),
+// a plain `vite build` uses safe defaults: BASE_PATH=/ and a dummy port.
+const onReplit = process.env.REPL_ID !== undefined;
+const rawPort = process.env.PORT ?? (onReplit ? undefined : '5173');
 
 if (!rawPort) {
   throw new Error(
@@ -19,7 +21,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const basePath = process.env.BASE_PATH;
+const basePath = process.env.BASE_PATH ?? (onReplit ? undefined : '/');
 
 if (!basePath) {
   throw new Error(
@@ -32,9 +34,11 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== 'production' &&
-    process.env.REPL_ID !== undefined
+    // Replit-only plugins load only on Replit, so a normal build works anywhere.
+    ...(onReplit
+      ? [await import('@replit/vite-plugin-runtime-error-modal').then((m) => m.default())]
+      : []),
+    ...(process.env.NODE_ENV !== 'production' && onReplit
       ? [
           await import('@replit/vite-plugin-cartographer').then((m) =>
             m.cartographer({

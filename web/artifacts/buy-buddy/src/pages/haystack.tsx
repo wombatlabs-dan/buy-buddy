@@ -10,6 +10,8 @@ import { useHunt } from "@/lib/store";
 import { usd } from "@/lib/pricing";
 import type { DiscoveryTag } from "@/lib/types";
 import { logHuntStart } from "./home";
+import { isLive } from "@/lib/api";
+import LiveHaystack from "./haystack-live";
 
 type Sort = "match" | "price-asc" | "price-desc" | "deal" | "risk";
 const riskRank = { low: 0, medium: 1, high: 2 };
@@ -19,16 +21,16 @@ export function NoHunt() {
   return (
     <div className="mx-auto max-w-xl px-5 py-24 text-center">
       <h1 className="display text-4xl">No hunt yet.</h1>
-      <p className="text-muted-foreground mt-3">Start one, or load the RTX 4090 sample hunt to walk through every stage.</p>
+      <p className="text-muted-foreground mt-3">{isLive ? "Start one to search the captured listings." : "Start one, or load the RTX 4090 sample hunt to walk through every stage."}</p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link href="/start" className="h-11 rounded-full border border-foreground px-6 inline-flex items-center" data-testid="link-start-empty">Start a hunt</Link>
-        <button onClick={() => { logHuntStart("RTX 4090", 1500, "per-hunt", true); navigate("/hunt"); }} className="h-11 rounded-full bg-foreground text-background px-6" data-testid="button-load-demo">Load sample hunt</button>
+        {!isLive && <button onClick={() => { logHuntStart("RTX 4090", 1500, "per-hunt", true); navigate("/hunt"); }} className="h-11 rounded-full bg-foreground text-background px-6" data-testid="button-load-demo">Load sample hunt</button>}
       </div>
     </div>
   );
 }
 
-function Counter({ stage, scanned, candidates, finalists }: { stage: number; scanned: number; candidates: number; finalists: number }) {
+export function Counter({ stage, scanned, candidates, finalists }: { stage: number; scanned: number; candidates: number; finalists: number }) {
   const items = [[scanned, "listings"], [candidates, "candidates"], [finalists, "finalists"]] as const;
   return (
     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2" aria-live="polite" data-testid="text-funnel">
@@ -45,6 +47,10 @@ function Counter({ stage, scanned, candidates, finalists }: { stage: number; sca
 }
 
 export default function Haystack() {
+  return isLive ? <LiveHaystack /> : <SampleHaystack />;
+}
+
+function SampleHaystack() {
   useMeta("The haystack", "Watch 200 sample listings narrow to 12 candidates and 3 finalists, with reasons for each.");
   const h = useHunt();
   const { data, isLoading, isError, refetch } = useHuntResult(h?.query, h?.maxPrice);

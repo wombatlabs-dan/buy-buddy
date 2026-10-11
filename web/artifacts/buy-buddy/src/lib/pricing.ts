@@ -13,4 +13,6 @@ export const usd = (n: number, digits = 0) =>
     maximumFractionDigits: digits,
   }).format(n);
 
-export const asset = (p: string) => `${import.meta.env.BASE_URL}${p.replace(/^\//, "")}`;
+/** Bundled images resolve against the app's base path; real listing photos are full URLs and pass through. */
+export const asset = (p: string | undefined) =>
+  !p ? `${import.meta.env.BASE_URL}images/l-box.jpg` : /^(https?:|data:)/.test(p) ? p : `${import.meta.env.BASE_URL}${p.replace(/^\//, "")}`;

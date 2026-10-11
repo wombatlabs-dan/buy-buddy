@@ -1,6 +1,7 @@
 import type { Listing } from "./types";
 
-export const SAMPLE_GOING_PRICE = 1200;
+// Going price for a used RTX 4090: about $2,500 (eBay used listings, Oct 11 2026: $2,450–3,200)
+export const SAMPLE_GOING_PRICE = 2500;
 export const SAMPLE_SCANNED = 200;
 export const GOODWILL_SEARCH = "https://shopgoodwill.com/categories/listing?st=RTX%204090";
 

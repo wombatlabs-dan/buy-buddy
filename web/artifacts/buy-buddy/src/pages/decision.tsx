@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { Link, useLocation, useParams } from "wouter";
+import { isLive } from "@/lib/api";
+import { liveApi, useExpect, type LiveHunt } from "@/lib/live";
 import { ArrowUpRight, Footprints, Handshake } from "lucide-react";
 import { Stepper, useMeta } from "@/components/shell";
 import { ListingGate } from "@/components/listing-gate";
@@ -7,13 +10,27 @@ import { hunt, type HuntState } from "@/lib/store";
 import { asset, usd } from "@/lib/pricing";
 import type { Listing } from "@/lib/types";
 
-function Decision({ l, h }: { l: Listing; h: HuntState }) {
+function Decision({ l, h, live }: { l: Listing; h: HuntState; live?: LiveHunt }) {
   const [, navigate] = useLocation();
+  const expect = useExpect();
+  const [err, setErr] = useState<string | null>(null);
   const goodwill = l.sellerKind === "shopgoodwill";
-  const verdict = h.challenges[l.id]?.verdict;
+  const verdict = live ? (live.verdict?.listingId === l.id ? live.verdict : undefined) : h.challenges[l.id]?.verdict;
   const url = l.listingUrl ?? l.searchUrl ?? "https://shopgoodwill.com";
+  // Live: the hunt must be following this listing and waiting on the buyer.
+  const ready = !live || (live.targetListingId === l.id && (live.state === "buyer_decision" || (!goodwill && live.state === "seller_photo")));
+  const decided = live?.decision?.listingId === l.id ? live.decision : null;
 
-  const decide = (choice: "meet" | "walk" | "goodwill") => {
+  const decide = async (choice: "meet" | "walk" | "goodwill") => {
+    if (live) {
+      setErr(null);
+      try {
+        await liveApi.decide(live.id, choice);
+        expect(live.id, (x) => x.state === "decided");
+        navigate("/record");
+      } catch (e) { setErr(e instanceof Error ? e.message : "Couldn't record the decision."); }
+      return;
+    }
     hunt.decide(l.id, choice);
     hunt.log({ actor: "You", actorKind: "you", action: "Made the decision",
       decision: choice === "meet" ? `Go meet the seller (${l.sellerName})` : choice === "walk" ? "Walk away" : "Bid or buy on ShopGoodwill (opened externally, nothing bid)", modelCost: 0 });
@@ -31,10 +48,16 @@ function Decision({ l, h }: { l: Listing; h: HuntState }) {
       <div className="mt-6 flex flex-wrap gap-2 items-center text-sm">
         <RiskBadge risk={l.risk} />
         {goodwill ? <span className="text-muted-foreground">Photo challenge skipped: institutional seller.</span>
-          : verdict ? <span className="text-muted-foreground">Sample photo verdict: {verdict.scenario === "failed" ? "failed verification" : verdict.scenario} ({verdict.confidence}%, simulated)</span>
+          : verdict ? <span className="text-muted-foreground">{live ? "Photo verdict" : "Sample photo verdict"}: {verdict.scenario === "failed" ? "failed verification" : verdict.scenario} ({verdict.confidence}%{live ? "" : ", simulated"})</span>
           : <span className="text-muted-foreground">No photo challenge run yet.</span>}
       </div>
-      <div className="mt-10 grid md:grid-cols-2 gap-5">
+      {verdict && live && verdict.scenario === "failed" && (
+        <ul className="mt-5 space-y-1 text-sm" data-testid="list-fail-reasons">{verdict.checks.filter((c) => c.status === "fail").map((c) => <li key={c.id}>• {c.detail}</li>)}</ul>
+      )}
+      {!ready && !decided && <p className="mt-6 text-sm text-muted-foreground" aria-live="polite">Getting the hunt ready for your decision...</p>}
+      {decided && <p className="mt-6 text-sm">You decided: {decided.choice === "walk" ? "walk away" : decided.choice === "meet" ? "go meet the seller" : "bid or buy on ShopGoodwill yourself"}. <Link href="/record" className="underline">See the trust record</Link></p>}
+      {err && <p className="mt-4 text-sm text-destructive" role="alert">{err}</p>}
+      <div className={`mt-10 grid md:grid-cols-2 gap-5 ${!ready || decided ? "pointer-events-none opacity-40" : ""}`}>
         {goodwill ? (
           <div>
             <a href={url} target="_blank" rel="noopener noreferrer" onClick={() => decide("goodwill")} data-testid="button-goodwill"
@@ -66,5 +89,5 @@ function Decision({ l, h }: { l: Listing; h: HuntState }) {
 export default function DecisionPage() {
   const { id } = useParams<{ id: string }>();
   useMeta("Your decision", "Go meet the seller or walk away. Every choice lands on your trust record.");
-  return <ListingGate id={id}>{(l, h) => <Decision l={l} h={h} />}</ListingGate>;
+  return <ListingGate id={id}>{(l, h, live) => <Decision l={l} h={h} live={isLive ? live : undefined} />}</ListingGate>;
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "wouter";
-import { ArrowLeft, ArrowRight, Check, Copy } from "lucide-react";
+import { Link, useLocation, useParams } from "wouter";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Copy, Loader2 } from "lucide-react";
+import { isLive } from "@/lib/api";
+import { liveApi, useExpect, type LiveHunt } from "@/lib/live";
 import { Stepper, useMeta } from "@/components/shell";
 import { ListingGate } from "@/components/listing-gate";
 import { DiscoveryBadge, MatchBadge, RiskBadge } from "@/components/badges";
@@ -9,7 +11,11 @@ import { asset, usd } from "@/lib/pricing";
 import type { Listing } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
-function Detail({ l, h }: { l: Listing; h: HuntState }) {
+function Detail({ l, h, live }: { l: Listing; h: HuntState; live?: LiveHunt }) {
+  const [, navigate] = useLocation();
+  const expect = useExpect();
+  const [going, setGoing] = useState(false);
+  const [goError, setGoError] = useState<string | null>(null);
   const { toast } = useToast();
   const [photo, setPhoto] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -19,7 +25,7 @@ function Detail({ l, h }: { l: Listing; h: HuntState }) {
 
   useEffect(() => {
     const a = `Opened listing ${l.id}`;
-    if (!hunt.hasEvent(a)) hunt.log({ actor: "You", actorKind: "you", action: a, decision: `Reviewing "${l.originalTitle}"`, modelCost: 0 });
+    if (!isLive && !hunt.hasEvent(a)) hunt.log({ actor: "You", actorKind: "you", action: a, decision: `Reviewing "${l.originalTitle}"`, modelCost: 0 });
   }, [l.id, l.originalTitle]);
 
   const picked = l.sellerQuestions.filter((q) => checks[q.id]);
@@ -31,7 +37,7 @@ function Detail({ l, h }: { l: Listing; h: HuntState }) {
       await navigator.clipboard.writeText(message);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      hunt.log({ actor: "You", actorKind: "you", action: "Copied seller message", decision: `${picked.length} question(s) for ${l.sellerName}; not sent by Buy Buddy`, modelCost: 0 });
+      if (!isLive) hunt.log({ actor: "You", actorKind: "you", action: "Copied seller message", decision: `${picked.length} question(s) for ${l.sellerName}; not sent by Buy Buddy`, modelCost: 0 });
       toast({ title: "Message copied", description: "Paste it into the marketplace yourself. Nothing was sent." });
     } catch {
       toast({ title: "Couldn't copy", description: "Your browser blocked clipboard access. Select the text in the preview and copy it manually.", variant: "destructive" });
@@ -39,6 +45,21 @@ function Detail({ l, h }: { l: Listing; h: HuntState }) {
   };
 
   const next = goodwill ? `/listing/${l.id}/decision` : `/listing/${l.id}/challenge`;
+  // Live: choosing to go further is the buyer's review decision; it's recorded on the hunt.
+  const proceed = async () => {
+    if (!isLive || !live) return navigate(next);
+    setGoing(true);
+    setGoError(null);
+    try {
+      await liveApi.select(live.id, l.id);
+      expect(live.id, (x) => x.targetListingId === l.id && (goodwill ? x.state === "buyer_decision" : x.challenge?.listingId === l.id));
+      navigate(next);
+    } catch (e) {
+      setGoError(e instanceof Error ? e.message : "Couldn't continue.");
+    } finally {
+      setGoing(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
@@ -61,7 +82,7 @@ function Detail({ l, h }: { l: Listing; h: HuntState }) {
         <div>
           <p className="text-sm text-muted-foreground">{l.source} · {l.sellerName} · {l.location} · {l.postedAgo}</p>
           <h1 className="display text-3xl md:text-5xl mt-3">"{l.originalTitle}"</h1>
-          <p className="text-xs text-muted-foreground mt-2">Seller's original title</p>
+          <p className="text-xs text-muted-foreground mt-2">Seller's original title{l.listingUrl && <> · <a href={l.listingUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 inline-flex items-center gap-0.5" data-testid="link-original-listing">Open the original listing<ArrowUpRight className="h-3 w-3" /></a></>}</p>
           <div className="mt-6 flex items-baseline gap-3"><span className="text-4xl tracking-tight">{usd(l.price)}</span><span className="text-muted-foreground">going price {usd(l.goingPrice)}</span></div>
           <div className="mt-4 flex flex-wrap gap-1.5">{l.tags.map((t) => <DiscoveryBadge key={t} tag={t} />)}<MatchBadge value={l.matchConfidence} /><RiskBadge risk={l.risk} /></div>
           {l.hiddenValue && <p className="mt-4 rounded-2xl bg-secondary p-4 text-sm"><strong className="font-medium">Hidden value:</strong> {l.hiddenValue.note}. <span className="text-muted-foreground">Estimate based on typical used part prices.</span></p>}
@@ -108,10 +129,21 @@ function Detail({ l, h }: { l: Listing; h: HuntState }) {
         </section>
       </div>
 
-      <div className="mt-12 flex justify-end">
-        <Link href={next} className="h-12 rounded-full bg-foreground text-background px-7 inline-flex items-center gap-2" data-testid="link-next-stage">
-          {goodwill ? "Make your decision" : "Run the photo challenge"}<ArrowRight className="h-4 w-4" />
-        </Link>
+      {l.checklist && l.checklist.length > 0 && (
+        <section className="mt-6 rounded-[2rem] border p-7" aria-labelledby="vet">
+          <h2 id="vet" className="display text-3xl">Vetting checklist</h2>
+          {l.coachedBy && <p className="text-xs text-muted-foreground mt-2">Written by {l.coachedBy} for this listing</p>}
+          <ul className="mt-5 space-y-3">{l.checklist.map((c) => (
+            <li key={c.item} className="flex gap-3"><span className={`mono text-[10px] uppercase rounded-full px-2 py-0.5 h-fit shrink-0 ${c.severity === "dead_end" || c.severity === "walk_away" ? "bg-[hsl(4_80%_93%)] text-[hsl(4_60%_36%)]" : "bg-secondary"}`}>{c.severity.replace("_", " ")}</span>
+              <span className="text-[15px]">{c.item}<span className="block text-sm text-muted-foreground">{c.why}</span></span></li>))}
+          </ul>
+        </section>
+      )}
+      <div className="mt-12 flex flex-col items-end gap-2">
+        <button onClick={proceed} disabled={going} className="h-12 rounded-full bg-foreground text-background px-7 inline-flex items-center gap-2 disabled:opacity-60" data-testid="link-next-stage">
+          {going && <Loader2 className="h-4 w-4 animate-spin" />}{goodwill ? "Make your decision" : "Run the photo challenge"}<ArrowRight className="h-4 w-4" />
+        </button>
+        {goError && <p className="text-sm text-destructive" role="alert">{goError}</p>}
       </div>
     </div>
   );
@@ -120,5 +152,5 @@ function Detail({ l, h }: { l: Listing; h: HuntState }) {
 export default function ListingPage() {
   const { id } = useParams<{ id: string }>();
   useMeta("Listing detail", "Why this sample listing matched, its risk signals and the questions worth asking.");
-  return <ListingGate id={id}>{(l, h) => <Detail l={l} h={h} />}</ListingGate>;
+  return <ListingGate id={id}>{(l, h, live) => <Detail l={l} h={h} live={live} />}</ListingGate>;
 }
