@@ -237,11 +237,13 @@ class JevClient extends Agent.Client {
 export const ACTORS = {
     expander: new Agent("expander-glm-5.3-flash", "search", new OpenRouterClient(MODELS.expander)),
     screener: new Agent("screener-jev", "screening", new JevClient()),
-    // Vision runs Kimi K2.6 on Workers AI via visionJSON(); this client is the OpenRouter fallback route.
-    looker: new Agent("vision-kimi-k2.6", "vision", new OpenRouterClient(MODELS.visionFallback)),
+    // The photo scan runs Gemini Flash first (Kimi K2.6 on Workers AI only as fallback), so the
+    // actor is named for Gemini; each trail line still names the model that actually answered.
+    looker: new Agent("vision-gemini-3.8-flash", "vision", new OpenRouterClient(MODELS.visionFallback)),
     coach: new Agent("coach-gemini-3.8-flash", "coaching", new OpenRouterClient(MODELS.coach)),
-    // Verification combines several models (reader, vision, Jev); each call is named on the trail.
-    verifier: new Agent("verifier-kimi-gemini-jev", "verification", new OpenRouterClient(MODELS.reader)),
+    // Verification combines several models (Gemini reader, Kimi vision with Gemini fallback, Jev);
+    // the actor is the verification step, and each call is named on the trail with its real model.
+    verifier: new Agent("verifier-multi-model", "verification", new OpenRouterClient(MODELS.reader)),
     matcher: new Code("haystack-matcher", "code"),
     router: new Code("shopgoodwill-rule", "code"),
     challenger: new Code("challenge-issuer", "code"),
