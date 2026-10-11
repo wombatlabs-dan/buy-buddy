@@ -336,7 +336,7 @@ look.run = async (job) => {
         const l = BY_ID.get(s.id)!;
         try {
             const img = await imageAsDataUrl(l.image!);
-            const { data, meta } = await visionJSON(LOOK_SYSTEM, `Listing title (seller's words): "${l.title}". Price $${l.price}. What do you see?`, [img], LOOK_SCHEMA);
+            const { data, meta } = await visionJSON(LOOK_SYSTEM, `Listing title (seller's words): "${l.title}". Price $${l.price}. What do you see?`, [img], LOOK_SCHEMA, { primary: "gemini" });
             metas.push(meta);
             seen.set(s.id, data);
         } catch (e) {
@@ -345,12 +345,11 @@ look.run = async (job) => {
     });
     const ok = [...seen.values()].filter((v) => !v.error);
     const spotted = ok.filter((v) => v.rtx_4090_likelihood >= 60).length;
-    const fallbacks = metas.filter((m) => m.fallbackFrom).length;
-    const byModel = new Map<string, CallMeta[]>();
+    const byModel = new Map<string, Array<CallMeta & { fallbackFrom?: string }>>();
     for (const m of metas) byModel.set(m.model, [...(byModel.get(m.model) ?? []), m]);
     for (const [model, ms] of byModel)
         trail.push(ev({ step: "look", actor: model, actorId: ACTORS.looker.id, actorKind: "model", action: "Looked at listing photos",
-            decision: `${ms.length} photo(s) checked${model !== MODELS.kimiVision && fallbacks ? " (Kimi on Workers AI was unavailable, so these went to the fallback)" : ""}; ${spotted} show a likely RTX 4090 across all photos checked`,
+            decision: `${ms.length} photo(s) checked${ms.some((m) => m.fallbackFrom) ? ` (fallback: ${ms.find((m) => m.fallbackFrom)!.fallbackFrom})` : ""}; ${spotted} of all photos checked show a likely RTX 4090`,
             ...sumCalls(ms) }));
     if (!metas.length && subset.length)
         trail.push(ev({ step: "look", actor: "Code: haystack-matcher", actorId: ACTORS.matcher.id, actorKind: "code", action: "Vision unavailable",
@@ -365,7 +364,13 @@ look.run = async (job) => {
         const vis = v && !v.error ? v : undefined;
         const visionYes = vis && vis.rtx_4090_likelihood >= 60;
         const jevYes = !s.error && s.jev >= 0.5 && ["card", "whole_pc", "lot"].includes(s.kind);
-        const visionNo = vis && s.kind === "card" && vis.rtx_4090_likelihood < 25;
+        // Vision overrules Jev only when it sees a physical card that clearly isn't a 4090
+        // (a photo of the retail box, or a blurry shot, is not evidence against).
+        const visionNo = vis && s.kind === "card" && vis.gpu_visible && vis.rtx_4090_likelihood < 25 && !/4090/.test(String(vis.card_brand_model)) && !/box/i.test(String(vis.card_brand_model) + String(vis.notes));
+        if (typeof l.price !== "number") {
+            rejected.push({ id: l.id, title: l.title, price: 0, source: l.source, listingUrl: l.url, jev: Math.round(s.jev * 100), reason: "Price wasn't captured from the listing page, so it can't be compared" });
+            continue;
+        }
         if (!(jevYes || visionYes) || visionNo) {
             if (s.jev >= 0.3 || s.kind === "part_or_accessory" || s.kind === "laptop" || /4090|4080/.test(l.title))
                 rejected.push({ id: l.id, title: l.title, price: l.price, source: l.source, listingUrl: l.url, jev: Math.round(s.jev * 100),
@@ -552,7 +557,7 @@ verify.run = async (job) => {
         readerJSON(MODELS.reader, "You read handwriting in photos exactly as written.", "Read all handwritten text on paper in this photo exactly as written.", [sellerUrl], READ_SCHEMA),
         visionJSON("You verify that a used-GPU seller physically has the card from their listing. A real proof photo shows the physical card in a room with a handwritten code beside it. Scammers who don't have the card often photograph the listing picture on a laptop or phone screen next to the code: look for a screen bezel, glare, moire patterns, visible pixels, and browser or gallery interface (for example 'Gallery (1 of 12)', arrows, a close button, page text). Also say whether the proof photo shows the same photograph as the listing photo.",
             listingUrls.length ? `Images 1-${listingUrls.length} are the original listing photos. The LAST image is the seller's new proof photo (should be the card with a handwritten code). Is the card in the last image the same make and model? Is the serial sticker visible? Is the last image a photo of a screen, or the same photograph as a listing photo?` : "This is the seller's proof photo (the card with a handwritten code). There is no listing photo to compare. Is a card and its serial sticker visible? Is it a photo of a screen?",
-            [...listingUrls, sellerUrl], SAME_SCHEMA),
+            [...listingUrls, sellerUrl], SAME_SCHEMA, { kimiTimeoutMs: 25_000 }),
     ]);
 
     const checks: Array<{ id: string; label: string; status: "pass" | "fail" | "unknown"; detail: string }> = [];

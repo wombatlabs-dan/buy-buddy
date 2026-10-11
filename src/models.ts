@@ -69,16 +69,19 @@ export interface JevAnswers {
 export async function jev(state: string, questions: Record<string, JevQuestion>): Promise<{ answers: JevAnswers; meta: CallMeta }> {
     const token = await secret("cloudflare-ai-token");
     const t0 = Date.now();
-    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/${MODELS.jev}`, {
+    // Working request shape (confirmed 2026-10-11): POST /ai/run with { model, input: { state, questions } };
+    // the reply nests answers and usage under result.result.
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-        body: JSON.stringify({ state: state.slice(0, 60_000), questions }),
+        body: JSON.stringify({ model: MODELS.jev, input: { state: state.slice(0, 60_000), questions } }),
         signal: AbortSignal.timeout(30_000),
     });
     const latencyMs = Date.now() - t0;
     const body: any = await res.json().catch(() => ({}));
     if (!res.ok || body.success === false) throw new Error(`Jev failed (${res.status}): ${JSON.stringify(body.errors ?? body).slice(0, 200)}`);
-    const r = body.result ?? body;
+    const r = body.result?.result ?? body.result ?? body;
+    if (!r.answers) throw new Error(`Jev returned no answers: ${JSON.stringify(body).slice(0, 200)}`);
     const inTok = r.usage?.input_tokens, outTok = r.usage?.output_tokens;
     return {
         answers: r.answers,
@@ -170,14 +173,23 @@ export function readerJSON(model: string, system: string, text: string, imageDat
  * goes to Gemini Flash on OpenRouter. The meta says which model actually answered,
  * plus `fallbackFrom` when the first choice failed.
  */
-export async function visionJSON(system: string, text: string, imageDataUrls: string[], schema: object): Promise<{ data: any; meta: CallMeta & { fallbackFrom?: string } }> {
+export async function visionJSON(system: string, text: string, imageDataUrls: string[], schema: object, opts: { primary?: "kimi" | "gemini"; kimiTimeoutMs?: number } = {}): Promise<{ data: any; meta: CallMeta & { fallbackFrom?: string } }> {
     const content: ChatContent = [{ type: "text", text }, ...imageDataUrls.map((url) => ({ type: "image_url" as const, image_url: { url } }))];
     const messages: ChatMessage[] = [
         { role: "system", content: `${system}\nReply with one JSON object matching this JSON Schema, and nothing else:\n${JSON.stringify(schema)}` },
         { role: "user", content },
     ];
+    if (opts.primary === "gemini") {
+        // Bulk photo scans: Gemini Flash first (≈3 s), Kimi only if Gemini fails.
+        try {
+            return await openRouterJSON(MODELS.visionFallback, messages, schema, 30_000);
+        } catch (e) {
+            const r = await workersAiJSON(MODELS.kimiVision, messages, opts.kimiTimeoutMs ?? 30_000);
+            return { data: r.data, meta: { ...r.meta, fallbackFrom: `${MODELS.visionFallback} (${String(e).slice(0, 80)})` } };
+        }
+    }
     try {
-        return await workersAiJSON(MODELS.kimiVision, messages, 45_000);
+        return await workersAiJSON(MODELS.kimiVision, messages, opts.kimiTimeoutMs ?? 45_000);
     } catch (e) {
         console.warn(`vision: Kimi on Workers AI failed, falling back: ${String(e).slice(0, 200)}`);
         const r = await openRouterJSON(MODELS.visionFallback, messages, schema);
