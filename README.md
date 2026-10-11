@@ -30,7 +30,7 @@ You tell Buy Buddy what you want and your budget. It hunts, screens, coaches you
 2. 🧹 **Screens every listing** — is this really a 4090, or a $24.99 set of 4090 fans, a heatsink, a cable, an eGPU dock? — and scores scam signals (far below market, "ships to you" for a local item, asks for Zelle or a deposit).
 3. 👀 **Looks at the photos** to confirm the card when the title is wrong, and estimates hidden value in whole-PC finds (RAM, SSD, power supply), clearly labeled as an estimate.
 4. 🧑‍🏫 **Coaches the buyer**: fit questions for you (power-supply wattage, case clearance) and the questions an expert would ask the seller (mined on? repasted? any melting on the power connector? box and receipt?).
-5. 📸 **Runs a photo challenge**: a unique code like **BLUE FOX 4417** that the seller writes on paper and photographs next to the card. Several models check the handwriting, compare the card to the listing photos, and look for a re-shot screen or a reused image. Result: **Verified, Unverified, or Failed verification** — with plain-language reasons, never "scammer."
+5. 📸 **Runs a photo challenge**: a unique code like **BLUE FOX 4417** that the seller writes on paper and photographs next to the card. Models read the handwriting and compare the card to the listing photos (looking for a re-shot screen), code checks for a reused image, and Jev combines it all into one verdict. Result: **Verified, Unverified, or Failed verification** — with plain-language reasons, never "scammer."
 6. ✋ **You decide**: go meet the seller, or walk away. Buy Buddy **never buys, never bids, and never messages a seller.**
 7. 🧾 **Keeps a trust record**: every step, who decided it (AI, code, or you by name), which model, what it cost, and how long it took.
 
@@ -55,7 +55,7 @@ A scam check is only as good as the chain behind it. No single model reads handw
 | Expand the search | **GLM 5.3 Flash** (via [OpenRouter](https://openrouter.ai/)) | Fast, cheap text generation for many search variants |
 | Screen listings · final verdict | **[Jev](https://developers.cloudflare.com/ai/models/typesafe/jev/)** by TypeSafe (Cloudflare Workers AI) | Answers typed yes/no and score questions with calibrated probabilities instead of free text — auditable decisions for a fraction of a cent |
 | Look at photos · read handwriting · coach | **Gemini 3.8 Flash** (via OpenRouter) | Strong vision and handwriting at low cost |
-| Independent vision check in verification | **Kimi K2.6** (Cloudflare Workers AI), Gemini as fallback | A second set of eyes, so one model's blind spot doesn't decide a scam call alone |
+| Backup vision | **Kimi K2.6** (Cloudflare Workers AI) | Takes over the photo checks if Gemini is down or slow, on a second provider, so the demo and the buyer are never stuck |
 | Photo-reuse fingerprint · ShopGoodwill rule · matching | **Plain code** | Free, instant, and the same answer every time |
 
 **Cheapest checker first:** code runs before any model sees a listing; Jev's typed questions run before the more expensive vision calls. No Anthropic or Meta models are used in the product.
@@ -104,7 +104,7 @@ The per-hunt model has a working precedent: Auction Sniper charges buyers 1.95% 
 
 ### Unit economics
 
-Every model call's cost is logged to the trust record. A full hunt plus a photo verification costs **_[$X — from the trust record]_** in model spend against a $49 fee. Jev's screening questions cost about $0.04 per million input tokens with free output ([Cloudflare](https://developers.cloudflare.com/ai/models/typesafe/jev/)), so screening hundreds of listings costs fractions of a cent — which is what makes scanning the whole haystack, not just keyword hits, economically possible.
+Every model call's cost is logged to the trust record. A full RTX 4090 hunt plus one photo verification cost **$0.051 in model spend** (measured end to end on Oct 11, 2026: 157 calls for the hunt, 3 for the verification) against a **$49 fee** — model cost is about 0.1% of revenue. Jev screened 140 listings for $0.0044 total. Jev's screening questions cost about $0.04 per million input tokens with free output ([Cloudflare](https://developers.cloudflare.com/ai/models/typesafe/jev/)), so screening hundreds of listings costs fractions of a cent — which is what makes scanning the whole haystack, not just keyword hits, economically possible.
 
 ### No purchase liability
 
@@ -151,7 +151,7 @@ Anbaric app (one origin: static front end + /api + hunt engine)
  expand ──► screen ──► look ──► coach ──► buyer_review ──► challenge ──► seller_photo ──► verify ──► buyer_decision
  (GLM)      (code +    (Gemini   (Gemini)  (HUMAN)          (code:        (HUMAN uploads    (Gemini    (HUMAN:
             Jev)        vision)                              unique code)  the seller's      reader +   meet or
-                                                                           photo)            Kimi +     walk away)
+                                                                           photo)            vision +   walk away)
                                                                                              fingerprint
                                                                                              + Jev)
         │
@@ -170,7 +170,7 @@ ShopGoodwill listings route from `buyer_review` straight to `buyer_decision` (no
 | Hosting · hunt engine · sign-in · audit trail | [Anbaric](https://github.com/anbaric-ai/anbaric-cloud) — one app: StateMachine jobs with AI, Code and Human actors |
 | Front end | React + Vite + Tailwind (prototyped in Replit by Kevin Ho), served as static files from the same app |
 | Screening and verdicts | Jev (`typesafe/jev`) on Cloudflare Workers AI |
-| Vision | Gemini 3.8 Flash (OpenRouter); Kimi K2.6 on Cloudflare Workers AI |
+| Vision | Gemini 3.8 Flash (OpenRouter); Kimi K2.6 on Cloudflare Workers AI as backup |
 | Search expansion | GLM 5.3 Flash (OpenRouter) |
 | Photo-reuse check | Perceptual difference hash in pure TypeScript ([`src/dhash.ts`](src/dhash.ts)) |
 | Code review against product rules | [Prelint](https://prelint.com) + `docs/adr/` |
@@ -191,7 +191,7 @@ buy-buddy/
 ├── src/
 │   ├── main.ts          # Anbaric app: serves the front end + /api
 │   ├── hunt.ts          # The hunt state machine and trust record
-│   ├── models.ts        # Every model call: Jev, Kimi, Gemini, GLM — with cost and latency
+│   ├── models.ts        # Every model call: Jev, Gemini, GLM, Kimi (backup) — with cost and latency
 │   ├── haystack.ts      # Loads the sample listings + the demo fixture
 │   └── dhash.ts         # Photo-reuse fingerprint
 ├── web/                 # Front end source (React + Vite, pnpm workspace)
