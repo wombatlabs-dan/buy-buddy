@@ -11,7 +11,7 @@ It finds the thing you want for sale online even when the seller described it wr
 
 ## Target Customer (and buyer)
 People buying high-value used electronics for themselves: PC builders, gamers, home-AI-rig builders. They gather on r/buildapc, r/pcmasterrace, r/PcBuild, r/hardwareswap, r/FacebookMarketplace, r/nvidia.
-Buyer sentence: "Buyers of used, high-value items who shop on Craigslist, Facebook Marketplace, OfferUp, eBay and ShopGoodwill pay us $14.99 a month, or 2% of an item's price per hunt ($9 minimum, $49 maximum), to find what everyone else missed and avoid scams. If 0.01% of Marketplace's billion monthly shoppers subscribe, that's 100,000 subscribers and about $18 million a year; at 0.05%, about $90 million." (User counts are targets; the billion-shopper figure needs verification.)
+Buyer sentence: "Buyers of used, high-value items who shop on Craigslist, Facebook Marketplace, eBay and ShopGoodwill pay us $14.99 a month, or 2% of an item's price per hunt ($9 minimum, $49 maximum), to find what everyone else missed and avoid scams."
 
 ## Market Evidence
 - FTC (via TechCrunch, 2026-04-27): $2.1B lost to scams that started on social media in 2025, up eightfold; shopping scams the most-reported type; Facebook the top platform.
