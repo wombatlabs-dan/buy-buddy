@@ -68,7 +68,12 @@ export function Header({ transparent = false }: { transparent?: boolean }) {
         <div className="flex items-center gap-2">
           <Link href="/pricing" className="md:hidden text-sm px-3 py-1.5" data-testid="link-nav-pricing-mobile">Pricing</Link>
           <Link href="/hunt" className="rounded-full border border-foreground px-4 py-1.5 text-sm hidden sm:inline-flex hover:bg-foreground hover:text-background transition-colors" data-testid="link-haystack">Your hunt</Link>
-          <Link href="/#start" className="rounded-full bg-foreground text-background px-4 py-1.5 text-sm hover:opacity-85 transition-opacity" data-testid="link-start">Start hunting</Link>
+          <Link href="/start" onClick={(e) => {
+              // Already on the home page: scroll to the "Start a hunt" box instead of navigating.
+              const box = document.getElementById("start");
+              if (box) { e.preventDefault(); box.scrollIntoView({ behavior: "smooth", block: "center" }); box.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true }); }
+            }}
+            className="rounded-full bg-foreground text-background px-4 py-1.5 text-sm hover:opacity-85 transition-opacity" data-testid="link-start">Start hunting</Link>
         </div>
       </div>
     </header>
