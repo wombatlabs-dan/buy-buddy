@@ -557,7 +557,7 @@ verify.run = async (job) => {
         readerJSON(MODELS.reader, "You read handwriting in photos exactly as written.", "Read all handwritten text on paper in this photo exactly as written.", [sellerUrl], READ_SCHEMA),
         visionJSON("You verify that a used-GPU seller physically has the card from their listing. A real proof photo shows the physical card in a room with a handwritten code beside it. Scammers who don't have the card often photograph the listing picture on a laptop or phone screen next to the code: look for a screen bezel, glare, moire patterns, visible pixels, and browser or gallery interface (for example 'Gallery (1 of 12)', arrows, a close button, page text). Also say whether the proof photo shows the same photograph as the listing photo.",
             listingUrls.length ? `Images 1-${listingUrls.length} are the original listing photos. The LAST image is the seller's new proof photo (should be the card with a handwritten code). Is the card in the last image the same make and model? Is the serial sticker visible? Is the last image a photo of a screen, or the same photograph as a listing photo?` : "This is the seller's proof photo (the card with a handwritten code). There is no listing photo to compare. Is a card and its serial sticker visible? Is it a photo of a screen?",
-            [...listingUrls, sellerUrl], SAME_SCHEMA, { kimiTimeoutMs: 25_000 }),
+            [...listingUrls, sellerUrl], SAME_SCHEMA, { primary: "gemini" }),
     ]);
 
     const checks: Array<{ id: string; label: string; status: "pass" | "fail" | "unknown"; detail: string }> = [];

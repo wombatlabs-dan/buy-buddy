@@ -77,8 +77,8 @@ export async function jev(state: string, questions: Record<string, JevQuestion>)
         body: JSON.stringify({ model: MODELS.jev, input: { state: state.slice(0, 60_000), questions } }),
         signal: AbortSignal.timeout(30_000),
     });
-    const latencyMs = Date.now() - t0;
     const body: any = await res.json().catch(() => ({}));
+    const latencyMs = Date.now() - t0;
     if (!res.ok || body.success === false) throw new Error(`Jev failed (${res.status}): ${JSON.stringify(body.errors ?? body).slice(0, 200)}`);
     const r = body.result?.result ?? body.result ?? body;
     if (!r.answers) throw new Error(`Jev returned no answers: ${JSON.stringify(body).slice(0, 200)}`);
@@ -115,11 +115,15 @@ async function openRouterJSON(model: string, messages: ChatMessage[], schema: ob
             response_format: { type: "json_schema", json_schema: { name: "result", strict: true, schema } },
             usage: { include: true },
             temperature: 0.2,
+            // Short structured tasks: low reasoning effort (these models require some) cuts ~7 s to ~2 s per call.
+            reasoning: { effort: "low" },
         }),
         signal: AbortSignal.timeout(timeoutMs),
     });
-    const latencyMs = Date.now() - t0;
+    // Latency is measured to the end of the body: OpenRouter sends headers early
+    // and keeps the connection open while the model works.
     const body: any = await res.json().catch(() => ({}));
+    const latencyMs = Date.now() - t0;
     if (!res.ok || body.error) throw new Error(`OpenRouter ${model} failed (${res.status}): ${JSON.stringify(body.error ?? body).slice(0, 200)}`);
     const text = body.choices?.[0]?.message?.content ?? "";
     return {
@@ -141,8 +145,8 @@ async function workersAiJSON(model: string, messages: ChatMessage[], timeoutMs =
         body: JSON.stringify({ model, messages, response_format: { type: "json_object" }, temperature: 0.2, max_tokens: 1500 }),
         signal: AbortSignal.timeout(timeoutMs),
     });
-    const latencyMs = Date.now() - t0;
     const body: any = await res.json().catch(() => ({}));
+    const latencyMs = Date.now() - t0;
     if (!res.ok || body.success === false || body.error) throw new Error(`Workers AI ${model} failed (${res.status}): ${JSON.stringify(body.errors ?? body.error ?? body).slice(0, 200)}`);
     const msg = body.choices?.[0]?.message ?? body.result?.choices?.[0]?.message;
     const text: string = msg?.content ?? body.result?.response ?? "";

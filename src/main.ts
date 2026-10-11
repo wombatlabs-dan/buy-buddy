@@ -114,9 +114,15 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL) {
 
     if (parts[0] === "api" && parts[1] === "hunts" && parts[2]) {
         const id = parts[2];
-        const view = await huntView(id, who); // also checks ownership
+        let view = await huntView(id, who); // also checks ownership
         const action = parts[3];
         if (!action && req.method === "GET") return json(res, 200, view);
+        // A job that just moved into a waiting step is briefly "active" before it parks.
+        // Give it a few seconds to settle so a quick click isn't refused.
+        for (let i = 0; i < 16 && view.status === Job.Status.ACTIVE && !["decided", "no_finds"].includes(view.state); i++) {
+            await new Promise((r) => setTimeout(r, 500));
+            view = await huntView(id, who);
+        }
         const parked = view.status === Job.Status.AWAITING_INPUT;
 
         if (action === "select" && req.method === "POST") {
