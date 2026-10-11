@@ -70,11 +70,11 @@ export function LiveChallenge({ l, live }: { l: Listing; live: LiveHunt }) {
       <Stepper current={3} />
       <p className="text-sm text-muted-foreground mt-8">Photo challenge for "{l.originalTitle}"</p>
       <div className="mt-6 rounded-[2rem] p-8 md:p-14 text-center bg-secondary">
-        <p className="text-sm">Ask the seller to write this on paper</p>
+        <p className="text-2xl md:text-3xl font-medium tracking-tight">Ask the seller to write this on paper</p>
         <p className="display text-5xl md:text-8xl mt-4 mono tracking-tight" data-testid="text-challenge-code">{challenge?.code ?? <Loader2 className="h-10 w-10 animate-spin mx-auto" aria-label="Issuing a code" />}</p>
-        <p className="mt-5 text-lg">Then photograph the card's serial sticker next to the note.</p>
+        <p className="mt-5 text-xl md:text-2xl">Then photograph the card's serial sticker next to the note.</p>
         <button onClick={copy} disabled={!challenge} className="mt-6 h-11 rounded-full border border-foreground px-5 inline-flex items-center gap-2 hover:bg-foreground hover:text-background transition-colors disabled:opacity-50" data-testid="button-copy-challenge"><Copy className="h-4 w-4" />Copy challenge text</button>
-        <p className="text-xs text-muted-foreground mt-3">You send it. Buy Buddy never contacts the seller.</p>
+        <p className="text-sm text-muted-foreground mt-3">You send it. Buy Buddy never contacts the seller.</p>
       </div>
 
       <div className="mt-8 grid md:grid-cols-2 gap-6">
