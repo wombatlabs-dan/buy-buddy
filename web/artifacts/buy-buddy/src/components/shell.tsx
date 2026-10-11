@@ -24,8 +24,8 @@ export function useMeta(title: string, description: string) {
 
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2 font-medium tracking-tight" data-testid="link-home">
-      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+    <Link href="/" className="flex items-center gap-3 text-2xl md:text-3xl font-semibold tracking-tight" data-testid="link-home">
+      <svg width="44" height="44" viewBox="0 0 24 24" aria-hidden>
         <circle cx="9" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="2.2" />
         <circle cx="15" cy="12" r="7" fill="hsl(var(--accent))" opacity=".9" />
       </svg>
@@ -55,12 +55,12 @@ export function Header({ transparent = false }: { transparent?: boolean }) {
   const [loc] = useLocation();
   return (
     <header className={`${transparent ? "absolute inset-x-0 top-[36px] z-30" : "relative border-b bg-background/80 backdrop-blur"}`}>
-      <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between gap-4">
+      <div className="mx-auto max-w-6xl px-5 h-20 flex items-center justify-between gap-4">
         <Logo />
-        <nav className="hidden md:flex items-center gap-7 text-sm" aria-label="Main">
+        <nav className="hidden md:flex items-center gap-8 text-lg font-medium" aria-label="Main">
           {nav.map((n) => (
             <Link key={n.href} href={n.href} data-testid={`link-nav-${n.label.toLowerCase().replace(/\s/g, "-")}`}
-              className={`transition-opacity hover:opacity-60 ${loc === n.href ? "underline underline-offset-4" : ""}`}>
+              className={`underline decoration-2 underline-offset-[6px] transition-colors hover:decoration-[hsl(var(--accent))] ${loc === n.href ? "decoration-[hsl(var(--accent))] decoration-[3px]" : "decoration-foreground/40"}`}>
               {n.label}
             </Link>
           ))}
