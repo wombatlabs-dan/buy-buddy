@@ -79,7 +79,7 @@ async function huntView(id: string, who: Human) {
 /** Read the trail, append a human event, and apply the update as that human. */
 async function humanUpdate(id: string, who: Human, changes: Map<string, any>, event: Omit<TrailEvent, "id" | "at" | "modelCost" | "costKnown" | "actor" | "actorId" | "actorKind">) {
     const job = await persistence.retrieve(id, who, ["trail"]);
-    const trail = ((await job.properties.get("trail")) as TrailEvent[] | undefined) ?? [];
+    const trail = [...(((await job.properties.get("trail")) as TrailEvent[] | undefined) ?? [])]; // copy, so the change is saved
     trail.push(ev({ ...event, actor: who.id, actorId: who.id, actorKind: "you" }));
     changes.set("trail", trail);
     await hunts.updateJob(id, changes, who);
@@ -106,8 +106,7 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL) {
             ev({ step: "start", actor: who.id, actorId: who.id, actorKind: "you", action: "Started a hunt", decision: `Looking for "${query}" up to $${maxPrice}` }),
         ];
         if (going) trail.push(ev({ step: "start", actor: "Code: pricing", actorId: "pricing", actorKind: "code", action: "Priced the hunt",
-            decision: plan === "monthly" ? "Covered by the $14.99/month plan (demo, no charge)" : `Service fee $${fee(going)} = 2% of the $${going} going price, capped at $49 (demo, no charge)`,
-            serviceFee: plan === "monthly" ? 0 : fee(going) }));
+            decision: plan === "monthly" ? "Covered by the $14.99/month plan (demo, no charge)" : "Fee: 2% of the price you pay ($9 min, $49 max), charged only if you buy (demo, no charge)" }));
         const job = await hunts.startJob(new Map<string, any>([["query", query], ["maxPrice", maxPrice], ["plan", plan], ["buyer", who.id], ["trail", trail]]), who);
         return json(res, 201, { huntId: job.id });
     }
