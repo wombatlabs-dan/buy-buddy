@@ -4,7 +4,7 @@
 
 **Built at** the Multi Model Hackathon · SF Tech Week · Frontier Tower, San Francisco · October 11, 2026
 
-**Live app:** [buy-buddy.cloud.anbaric.ai](https://buy-buddy.cloud.anbaric.ai) (hosted on Anbaric; sign-in required) · **Demo video:** _[link]_
+**Live app:** [buy-buddy.cloud.anbaric.ai](https://buy-buddy.cloud.anbaric.ai) (hosted on Anbaric; sign-in required) · **[▶ Demo video](https://drive.google.com/file/d/12a6I0IUdyR7W4chk2pq5QkspqkDtdBD4/view)**
 
 ---
 
