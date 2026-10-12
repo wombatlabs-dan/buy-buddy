@@ -53,8 +53,11 @@ function sumCalls(metas: CallMeta[]) {
     return { modelCost: cost, costKnown: metas.every((m) => m.costUsd !== null), latencyMs: latency, calls: metas.length };
 }
 
+// Always work on a COPY of a stored list. The machine saves a property only when its
+// value differs from what it read; pushing onto the stored array in place looks
+// "unchanged", so on the platform the new events were silently never saved.
 async function trailOf(job: Job): Promise<TrailEvent[]> {
-    return ((await job.properties.get("trail")) as TrailEvent[] | undefined) ?? [];
+    return [...(((await job.properties.get("trail")) as TrailEvent[] | undefined) ?? [])];
 }
 
 /** Run `fn` over items with at most `limit` in flight. */
@@ -442,7 +445,8 @@ const COACH_SCHEMA = {
 
 const coach = new Action("Coach the buyer", ACTORS.coach);
 coach.run = async (job) => {
-    const candidates = ((await job.properties.get("candidates")) as ListingView[]) ?? [];
+    // Deep copy so the coached questions are a real change the machine will save.
+    const candidates = structuredClone(((await job.properties.get("candidates")) as ListingView[]) ?? []);
     const finalistIds = ((await job.properties.get("finalistIds")) as string[]) ?? [];
     const trail = await trailOf(job);
     const metas: CallMeta[] = [];
@@ -472,6 +476,7 @@ coach.run = async (job) => {
     trail.push(ev({ step: "coach", actor: metas[0]?.model ?? MODELS.coach, actorId: ACTORS.coach.id, actorKind: "model", action: "Wrote questions and a vetting checklist",
         decision: `${metas.length} finalist(s) coached${failures ? `; ${failures} fell back to the standard checklist` : ""}. Other candidates use the standard checklist.`,
         ...sumCalls(metas) }));
+    console.log(`[hunt ${job.id}] coach done: trail has ${trail.length} events, ${trail.filter((e) => e.actorKind === "model").reduce((n, e) => n + (e.calls ?? 0), 0)} model calls, $${trail.reduce((n, e) => n + e.modelCost, 0).toFixed(5)}`);
     return new Map<string, any>([["candidates", candidates], ["trail", trail]]);
 };
 

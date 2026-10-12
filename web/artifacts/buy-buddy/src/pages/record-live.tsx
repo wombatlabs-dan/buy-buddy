@@ -8,7 +8,9 @@ import { useLiveHunt } from "@/lib/live";
 import { NoHunt } from "./haystack";
 
 const icon = { model: Bot, code: Cog, you: User };
-const money = (n: number) => (n > 0 && n < 0.01 ? `$${n.toFixed(5)}` : usd(n, 2));
+// Model spend is fractions of a cent per call: show enough digits that real spend never reads $0.00.
+const money = (n: number) => (n > 0 && n < 0.01 ? `$${n.toFixed(5)}` : n > 0 && n < 1 ? `$${n.toFixed(3)}` : usd(n, 2));
+const buyFee = (price: number) => Math.min(49, Math.max(9, Math.round(price * 0.02 * 100) / 100));
 
 /** The trust record, read from the hunt's backend record (each line is a write attributed to an Anbaric actor). */
 export default function LiveRecord() {
@@ -22,7 +24,9 @@ export default function LiveRecord() {
 
   let running = 0;
   const rows = h.trail.map((e) => { running += e.modelCost; return { ...e, running }; });
-  const fee = h.trail.reduce((s, e) => s + (e.serviceFee ?? 0), 0);
+  // Pay only if you buy: the fee is 2% of the price of the listing you went for.
+  const target = h.candidates.find((c) => c.id === (h.decision?.listingId ?? h.targetListingId));
+  const walked = h.decision?.choice === "walk";
   const calls = h.trail.reduce((s, e) => s + (e.calls ?? 0), 0);
   const unknownCost = h.trail.some((e) => e.actorKind === "model" && !e.costKnown);
   const d = h.decision;
@@ -62,7 +66,13 @@ export default function LiveRecord() {
         <div className="grid sm:grid-cols-2 gap-4 mt-4">
           <div className="rounded-[2rem] bg-secondary p-6"><p className="text-sm">Model spend for this hunt</p><p className="display text-4xl mt-2" data-testid="text-model-total">{money(running)}</p>
             <p className="text-xs text-muted-foreground mt-2">{calls} model calls, as reported by each provider{unknownCost ? "; some calls didn't report a cost and aren't included" : ""}. Not billed to you.</p></div>
-          <div className="rounded-[2rem] border p-6"><p className="text-sm">Buy Buddy service fee</p><p className="display text-4xl mt-2" data-testid="text-service-fee">{h.plan === "monthly" ? "$14.99/mo" : usd(fee, 2)}</p><p className="text-xs text-muted-foreground mt-2">Demo only. No charge has been made and no payment details were collected.</p></div>
+          <div className="rounded-[2rem] border p-6"><p className="text-sm">Buy Buddy service fee</p>
+            <p className="display text-4xl mt-2" data-testid="text-service-fee">{h.plan === "monthly" ? "$14.99/mo" : walked || !target ? "$0.00" : usd(buyFee(target.price), 2)}</p>
+            <p className="text-xs text-muted-foreground mt-2" data-testid="text-service-fee-note">{h.plan === "monthly" ? "Monthly plan. Demo only, no charge made."
+              : walked ? "You walked away, so no fee. Buy Buddy charges 2% of the price ($9 min, $49 max) only when you buy."
+              : target && h.decision ? "Charged only if you complete the purchase. Demo only, no charge made."
+              : target ? `${usd(buyFee(target.price), 2)} only if you buy "${target.originalTitle}". Demo only, no charge made.`
+              : "Buy Buddy charges 2% of the price ($9 min, $49 max) only when you buy."}</p></div>
         </div>
         <div className="mt-12 flex flex-wrap gap-3">
           <Link href="/hunt" className="h-11 rounded-full border border-foreground px-6 inline-flex items-center">Back to the haystack</Link>
